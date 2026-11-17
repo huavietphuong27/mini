@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document Timestamp Registry | DS 441 A</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div>
+          <h1>Document Timestamp Registry</h1>
+          <p class="subtitle">
+            DS 441 A - Blockchain: Theory &amp; Practices &bull; Hứa Viết Phương (29211140476)
+          </p>
+        </div>
+        <div class="badge-row">
+          <span id="connectionBadge" class="pill">Disconnected</span>
+          <span id="networkBadge" class="pill">Chain: -</span>
+          <span id="roleBadge" class="pill">Role: -</span>
+        </div>
+      </header>
+
+      <div id="statusBanner" class="status-banner info">
+        Connect MetaMask (configured for Ganache) or connect directly to local Ganache RPC
+        (<span class="mono">http://127.0.0.1:7545</span>), then load or deploy the contract.
+      </div>
+
+      <!-- Connection & Contract Controls -->
+      <section class="card">
+        <h2>1. Wallet &amp; Contract Connection (Ganache Test Network Only)</h2>
+        <p class="card-desc">
+          Documents are hashed locally in your browser via Web Crypto SHA-256. Only the 32-byte hash is sent on-chain.
+        </p>
+        <div class="grid-2">
+          <div>
+            <div class="field">
+              <label for="rpcUrlInput">Ganache RPC URL</label>
+              <input id="rpcUrlInput" type="text" value="http://127.0.0.1:7545" />
+            </div>
+            <div class="row">
+              <button id="connectGanacheBtn" class="primary">Connect Ganache RPC</button>
+              <button id="connectMetaMaskBtn">Connect MetaMask Wallet</button>
+            </div>
+            <div class="field" style="margin-top: 12px">
+              <label for="accountSelect">Active Ganache Test Account (RPC mode)</label>
+              <select id="accountSelect" disabled>
+                <option value="">Connect Ganache RPC to list unlocked accounts</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div class="field">
+              <label for="contractAddressInput">Deployed Contract Address</label>
+              <input
+                id="contractAddressInput"
+                type="text"
+                class="mono"
+                placeholder="0x... (paste from Remix or click Deploy New)"
+              />
+            </div>
+            <div class="row">
+              <button id="loadContractBtn" class="primary">Load Contract</button>
+              <button id="deployContractBtn">Deploy New to Ganache</button>
+              <button id="refreshStateBtn">Refresh State</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Contract State Cards -->
+      <section class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Connected Account</div>
+          <div id="statAccount" class="stat-value mono">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Balance (Test ETH)</div>
+          <div id="statBalance" class="stat-value">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Contract Owner</div>
+          <div id="statOwner" class="stat-value mono">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Registration State</div>
+          <div id="statPaused" class="stat-value">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Total Registered</div>
+          <div id="statTotal" class="stat-value">-</div>
+        </div>
+      </section>
+
+      <!-- Core Operations: Register & Verify -->
+      <div class="grid-2">
+        <section class="card">
+          <h2>2. Register Document Hash</h2>
+          <p class="card-desc">
+            Select a file or enter text to compute a local SHA-256 hash. Duplicate hashes are rejected on-chain.
+          </p>
+          <div class="field">
+            <label for="regFileInput">Choose File (hashed locally, never uploaded)</label>
+            <input id="regFileInput" type="file" />
+          </div>
+          <div class="field">
+            <label for="regTextInput">Or Hash Plain Text (optional quick test)</label>
+            <div class="row">
+              <input id="regTextInput" type="text" placeholder="Type text to compute SHA-256..." style="flex: 1" />
+              <button id="hashRegTextBtn" type="button">Hash Text</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="regHashInput">Document Hash (bytes32)</label>
+            <input id="regHashInput" type="text" class="mono" placeholder="0x..." />
+          </div>
+          <div class="field">
+            <label for="regLabelInput">Optional Label (max 128 bytes)</label>
+            <input id="regLabelInput" type="text" placeholder="e.g. Midterm-Report-v1.pdf" maxlength="128" />
+          </div>
+          <button id="registerBtn" class="primary">Register Timestamp on Blockchain</button>
+        </section>
+
+        <section class="card">
+          <h2>3. Verify / Lookup Document Hash</h2>
+          <p class="card-desc">
+            Prove whether a document hash was registered, by which address, and at what blockchain timestamp.
+          </p>
+          <div class="field">
+            <label for="verifyFileInput">Choose File to Verify (hashed locally)</label>
+            <input id="verifyFileInput" type="file" />
+          </div>
+          <div class="field">
+            <label for="verifyHashInput">Document Hash (bytes32)</label>
+            <div class="row">
+              <input id="verifyHashInput" type="text" class="mono" placeholder="0x..." style="flex: 1" />
+              <button id="verifyBtn" class="primary">Verify Hash</button>
+            </div>
+          </div>
+          <div id="verifyResult" class="verify-box">
+            <span style="color: var(--muted)">Enter or select a document to look up its on-chain timestamp record.</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Permissions & Admin -->
+      <div class="grid-2">
+        <section class="card">
+          <h2>4. Revoke Record (Original Registrar Only)</h2>
+          <p class="card-desc">
+            Enforced in Solidity: only the address that originally registered the hash can revoke it.
+          </p>
+          <div class="field">
+            <label for="revokeHashInput">Registered Document Hash (bytes32)</label>
+            <input id="revokeHashInput" type="text" class="mono" placeholder="0x..." />
+          </div>
+          <div class="field">
+            <label for="revokeReasonInput">Revocation Reason</label>
+            <input id="revokeReasonInput" type="text" placeholder="e.g. Superseded by signed v2" />
+          </div>
+          <button id="revokeBtn" class="danger">Revoke Document</button>
+        </section>
+
+        <section class="card">
+          <h2>5. Contract Owner Controls (Owner Address Only)</h2>
+          <p class="card-desc">
+            Non-owner accounts calling this action are rejected by the smart contract (<span class="mono">Unauthorized: caller is not contract owner</span>).
+          </p>
+          <div class="row" style="margin-top: 12px">
+            <button id="togglePauseBtn" class="warn">Toggle Pause / Unpause Registrations</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Registered Hashes Table -->
+      <section class="card">
+        <div class="row" style="justify-content: space-between; margin-bottom: 10px">
+          <h2 style="margin: 0">6. On-Chain Registered Hashes</h2>
+          <button id="reloadTableBtn">Reload Table</button>
+        </div>
+        <div style="overflow-x: auto">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Document Hash</th>
+                <th>Label</th>
+                <th>First Registrar</th>
+                <th>Timestamp (UTC)</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="registryTableBody">
+              <tr>
+                <td colspan="7" style="color: var(--muted)">Load a contract to view registered hashes.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Event & Error Log -->
+      <section class="card">
+        <div class="row" style="justify-content: space-between; margin-bottom: 10px">
+          <h2 style="margin: 0">7. Transaction Status, Errors &amp; Contract Events</h2>
+          <button id="clearLogBtn">Clear Log</button>
+        </div>
+        <div id="eventLog" class="log-list"></div>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+    <script src="./contract-config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
